@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int                @id @default(autoincrement())
+  telegramId        BigInt             @unique @map("telegram_id")
+  username          String?            @db.VarChar(32)
+  firstName         String?            @map("first_name") @db.VarChar(64)
+  lastName          String?            @map("last_name") @db.VarChar(64)
+  languageCode      String?            @map("language_code") @db.VarChar(10)
+  timezone          String             @default("UTC") @db.VarChar(50)
+  isActive          Boolean            @default(true) @map("is_active")
+  isBlocked         Boolean            @default(false) @map("is_blocked")
+  isPremium         Boolean            @default(false) @map("is_premium")
+  preferences       String             @default("{}") // JSON string
+  lastActivity      DateTime           @default(now()) @map("last_activity")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  
+  // Relations
+  favorites         Favorite[]
+  reminders         Reminder[]
+  analytics         UserAnalytics[]
+  searches          SearchHistory[]
+  achievements      UserAchievement[]
+  groupMemberships  GroupMember[]
+  
+  @@map("users")
+  @@index([telegramId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([lastActivity])
+}
+
+model Hadith {
+  id              String        @id @default(uuid())
+  dorarId         String?       @unique @map("dorar_id") // From Dorar.net API
+  text            String        @db.Text
+  arabicText      String?       @map("arabic_text") @db.Text
+  narrator        String?       @db.VarChar(100)
+  source          String?       @db.VarChar(100)
+  book            String?       @db.VarChar(100)
+  chapter         String?       @db.VarChar(200)
+  hadithNumber    String?       @map("hadith_number") @db.VarChar(50)
+  grade           String?       @db.VarChar(50) // Sahih, Hasan, Da'if, etc.
+  topic           String?       @db.VarChar(100)
+  keywords        String?       @db.Text // Comma-separated keywords
+  translation     String?       @db.Text
+  explanation     String?       @db.Text
+  searchCount     Int           @default(0) @map("search_count")
+  favoriteCount   Int           @default(0) @map("favorite_count")
+  isVerified      Boolean       @default(false) @map("is_verified")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  favorites       Favorite[]
+  searches        SearchHistory[]
+  reminders       ReminderHadith[]
+  
+  @@map("hadiths")
+  @@index([dorarId])
+  @@index([narrator])
+  @@index([source])
+  @@index([topic])
+  @@index([grade])
+  @@index([searchCount])
+  @@index([createdAt])
+}
+
+model Favorite {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  hadithId    String    @map("hadith_id")
+  tags        String?   @db.Text // JSON array of tags
+  notes       String?   @db.Text
+  isPrivate   Boolean   @default(true) @map("is_private")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hadith      Hadith    @relation(fields: [hadithId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, hadithId])
+  @@map("favorites")
+  @@index([userId])
+  @@index([hadithId])
+  @@index([createdAt])
+}
+
+model Reminder {
+  id            Int              @id @default(autoincrement())
+  userId        Int              @map("user_id")
+  name          String           @db.VarChar(100)
+  description   String?          @db.Text
+  frequency     String           @db.VarChar(20) // daily, weekly, monthly
+  time          String           @db.VarChar(10) // HH:MM format
+  timezone      String           @db.VarChar(50)
+  isActive      Boolean          @default(true) @map("is_active")
+  lastSent      DateTime?        @map("last_sent")
+  nextDue       DateTime?        @map("next_due")
+  topics        String?          @db.Text // JSON array of preferred topics
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  
+  // Relations
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hadiths       ReminderHadith[]
+  
+  @@map("reminders")
+  @@index([userId])
+  @@index([isActive])
+  @@index([nextDue])
+  @@index([frequency])
+}
+
+model ReminderHadith {
+  id          Int       @id @default(autoincrement())
+  reminderId  Int       @map("reminder_id")
+  hadithId    String    @map("hadith_id")
+  sentAt      DateTime  @default(now()) @map("sent_at")
+  wasRead     Boolean   @default(false) @map("was_read")
+  
+  // Relations
+  reminder    Reminder  @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  hadith      Hadith    @relation(fields: [hadithId], references: [id], onDelete: Cascade)
+  
+  @@unique([reminderId, hadithId, sentAt])
+  @@map("reminder_hadiths")
+  @@index([reminderId])
+  @@index([hadithId])
+  @@index([sentAt])
+}
+
+model SearchHistory {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  hadithId    String?   @map("hadith_id")
+  query       String    @db.VarChar(200)
+  filters     String?   @db.Text // JSON string of applied filters
+  resultCount Int       @default(0) @map("result_count")
+  timestamp   DateTime  @default(now())
+  
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hadith      Hadith?   @relation(fields: [hadithId], references: [id], onDelete: SetNull)
+  
+  @@map("search_history")
+  @@index([userId])
+  @@index([query])
+  @@index([timestamp])
+}
+
+model UserAnalytics {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @map("user_id")
+  date                DateTime  @db.Date
+  searchCount         Int       @default(0) @map("search_count")
+  favoritesAdded      Int       @default(0) @map("favorites_added")
+  remindersReceived   Int       @default(0) @map("reminders_received")
+  timeSpent           Int       @default(0) @map("time_spent") // in seconds
+  featuresUsed        String?   @map("features_used") @db.Text // JSON array
+  lastActiveHour      Int?      @map("last_active_hour") // 0-23
+  
+  // Relations
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, date])
+  @@map("user_analytics")
+  @@index([userId])
+  @@index([date])
+}
+
+model Achievement {
+  id              String            @id @default(uuid())
+  name            String            @unique @db.VarChar(100)
+  description     String            @db.Text
+  icon            String            @db.VarChar(10) // Emoji
+  category        String            @db.VarChar(50)
+  condition       String            @db.Text // JSON condition for unlocking
+  points          Int               @default(0)
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  
+  // Relations
+  userAchievements UserAchievement[]
+  
+  @@map("achievements")
+  @@index([category])
+  @@index([isActive])
+}
+
+model UserAchievement {
+  id              Int           @id @default(autoincrement())
+  userId          Int           @map("user_id")
+  achievementId   String        @map("achievement_id")
+  unlockedAt      DateTime      @default(now()) @map("unlocked_at")
+  progress        Int           @default(100) // Percentage completed
+  
+  // Relations
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement     Achievement   @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlockedAt])
+}
+
+model Group {
+  id          Int           @id @default(autoincrement())
+  telegramId  BigInt        @unique @map("telegram_id")
+  title       String        @db.VarChar(100)
+  description String?       @db.Text
+  type        String        @db.VarChar(20) // group, supergroup, channel
+  isActive    Boolean       @default(true) @map("is_active")
+  settings    String        @default("{}") // JSON settings
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  
+  // Relations
+  members     GroupMember[]
+  
+  @@map("groups")
+  @@index([telegramId])
+  @@index([isActive])
+  @@index([type])
+}
+
+model GroupMember {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  groupId   Int       @map("group_id")
+  role      String    @default("member") @db.VarChar(20) // admin, member
+  joinedAt  DateTime  @default(now()) @map("joined_at")
+  isActive  Boolean   @default(true) @map("is_active")
+  
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, groupId])
+  @@map("group_members")
+  @@index([userId])
+  @@index([groupId])
+  @@index([role])
+}
+
+model Cache {
+  id          String    @id
+  data        String    @db.Text
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@map("cache")
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+model AppSettings {
+  key         String    @id @db.VarChar(100)
+  value       String    @db.Text
+  description String?   @db.Text
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  @@map("app_settings")
+}

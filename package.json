@@ -1,0 +1,97 @@
+{
+  "name": "smart-hadith-bot",
+  "version": "1.0.0",
+  "description": "🕌 A sophisticated Telegram bot for Hadith (Islamic traditions) with advanced UI/UX design",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "node src/database/seeders/index.js",
+    "db:studio": "prisma studio",
+    "build": "echo 'No build step required for Node.js'",
+    "docker:build": "docker build -t smart-hadith-bot .",
+    "docker:run": "docker run -p 3000:3000 smart-hadith-bot",
+    "logs": "tail -f logs/combined.log"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "hadith",
+    "islam",
+    "islamic",
+    "nodejs",
+    "telegraf",
+    "sqlite",
+    "prisma"
+  ],
+  "author": "Smart Hadith Bot Team",
+  "license": "MIT",
+  "dependencies": {
+    "telegraf": "^4.15.0",
+    "prisma": "^5.7.0",
+    "@prisma/client": "^5.7.0",
+    "sqlite3": "^5.1.6",
+    "axios": "^1.6.2",
+    "winston": "^3.11.0",
+    "node-cron": "^3.0.3",
+    "joi": "^17.11.0",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.43",
+    "lodash": "^4.17.21",
+    "uuid": "^9.0.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.55.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-n": "^16.4.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "supertest": "^6.3.3",
+    "nodemon": "^3.0.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js",
+      "!src/database/migrations/**",
+      "!src/database/seeders/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  },
+  "eslintConfig": {
+    "extends": "standard",
+    "env": {
+      "node": true,
+      "jest": true
+    },
+    "rules": {
+      "no-console": "warn",
+      "prefer-const": "error",
+      "no-var": "error"
+    }
+  }
+}
